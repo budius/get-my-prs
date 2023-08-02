@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches: [ main ]
+
+jobs:
+
+  build:
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.0.7
+
+      - name: Install Dart pub dependencies
+        run: dart pub get
+
+      - name: Compile executable
+        run: dart compile exe bin/get_my_prs.dart -o getMyPrs-${{ matrix.os }}
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v3
+        with:
+          name: getMyPrs-${{ matrix.os }}
+          retention-days: 3
+          path: getMyPrs-${{ matrix.os }}
