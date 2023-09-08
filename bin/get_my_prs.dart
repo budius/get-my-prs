@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:http/http.dart' as http;
 import 'package:collection/collection.dart';
+import 'package:http/http.dart' as http;
 
 Future<void> main(List<String> arguments) async {
   // date since when get PRs from
@@ -32,11 +32,13 @@ Future<void> main(List<String> arguments) async {
       help: 'Since which date to get PRs from yyyy-MM-dd',
       defaultsTo: defaultDate);
   parser.addFlag('help', abbr: 'h', help: 'Prints usage', negatable: false);
+  parser.addFlag('verbose', abbr: 'v', help: 'Weekday/state', negatable: false);
 
   final String accessToken;
   final Iterable<String> projects;
   final String owner;
   final String date;
+  final bool verbose;
   try {
     final ArgResults args = parser.parse(arguments);
     if (args['help'] == true) {
@@ -47,6 +49,7 @@ Future<void> main(List<String> arguments) async {
     projects = (args['projects'] as String).split(',').map((e) => e.trim());
     owner = args['owner'];
     date = args['date'];
+    verbose = args['verbose'];
   } on ArgumentError catch (e) {
     final msg = e.toString();
     print('\n$msg\n${'*' * msg.length}');
@@ -94,8 +97,23 @@ Future<void> main(List<String> arguments) async {
           jsonDecode(utf8.decode(projectResponse.bodyBytes)) as Map;
 
       // extract the titles
-      return (projectJson['items'] as List<dynamic>)
-          .map((e) => e['title'] as String);
+      return (projectJson['items'] as List<dynamic>?)?.map((e) {
+            if (verbose) {
+              String weekday =
+                  switch (DateTime.parse(e['created_at']).weekday) {
+                1 => 'Mon',
+                2 => 'Tue',
+                3 => 'Wed',
+                4 => 'Thu',
+                5 => 'Fri',
+                _ => 'You should not be working on weekend!!! '
+              };
+              return '$weekday | ${(e['state'] as String).padRight(6)} | ${(e['title'])}';
+            } else {
+              return e['title'] as String;
+            }
+          }).toList() ??
+          [];
     });
 
     // print the result
